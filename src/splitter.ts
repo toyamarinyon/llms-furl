@@ -17,31 +17,42 @@ export interface SplitResult {
   pages: Page[];
 }
 
+type DebugLogger = (message: string) => void;
+
 const DASH_LINE = "--------------------------------------------------------------------------------";
+
+function logDebug(debug: DebugLogger | undefined, message: string): void {
+  if (debug) {
+    debug(message);
+  }
+}
 
 /**
  * Detect the format pattern from file content
  */
 export function detectPattern(content: string): FormatPattern {
-  // Pattern B: <page> tags
-  if (content.includes("<page>")) {
-    return "pattern-b";
-  }
+  const lines = content.split("\n");
 
-  // Pattern D: dash separators (vercel format)
-  if (content.startsWith(DASH_LINE)) {
+  // Pattern D: dash separators (vercel format), even with a preface header
+  const dashCount = lines.filter((line) => line.trim() === DASH_LINE).length;
+  if (dashCount >= 2) {
     return "pattern-d";
   }
 
-  // Check first few lines to distinguish Pattern A vs C
-  const lines = content.split("\n").slice(0, 100);
+  // Pattern B: <page> tags (require a closing tag to avoid false positives)
+  if (/<page>[\s\S]*?<\/page>/.test(content)) {
+    return "pattern-b";
+  }
 
-  for (let i = 0; i < lines.length - 2; i++) {
-    const line = lines[i];
+  // Check first few lines to distinguish Pattern A vs C
+  const firstLines = lines.slice(0, 100);
+
+  for (let i = 0; i < firstLines.length - 2; i++) {
+    const line = firstLines[i];
     if (line === undefined) continue;
     if (line.startsWith("# ")) {
-      const nextLine = lines[i + 1];
-      const lineAfter = lines[i + 2];
+      const nextLine = firstLines[i + 1];
+      const lineAfter = firstLines[i + 2];
 
       // Pattern A: # Title followed immediately by Source:
       if (nextLine?.startsWith("Source: ")) {
@@ -109,11 +120,12 @@ function isInsideCodeBlock(lines: string[], lineIndex: number): boolean {
 /**
  * Split content using Pattern A/D: # Title + Source:
  */
-function splitPatternA(content: string): Page[] {
+function splitPatternA(content: string, debug?: DebugLogger): Page[] {
   const lines = content.split("\n");
   const pages: Page[] = [];
   let currentPage: { title: string; url: string; startLine: number } | null =
     null;
+  let boundaryCount = 0;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -146,6 +158,14 @@ function splitPatternA(content: string): Page[] {
         url: nextLine.slice(8).trim(),
         startLine: i,
       };
+
+      if (boundaryCount < 3) {
+        logDebug(
+          debug,
+          `pattern-a boundary at line ${i + 1}: title="${currentPage.title}" url="${currentPage.url}"`
+        );
+        boundaryCount++;
+      }
     }
   }
 
@@ -166,10 +186,11 @@ function splitPatternA(content: string): Page[] {
 /**
  * Split content using Pattern B: <page>...</page> tags
  */
-function splitPatternB(content: string): Page[] {
+function splitPatternB(content: string, debug?: DebugLogger): Page[] {
   const pages: Page[] = [];
   const pageRegex = /<page>([\s\S]*?)<\/page>/g;
   let match;
+  let boundaryCount = 0;
 
   while ((match = pageRegex.exec(content)) !== null) {
     const matchedContent = match[1];
@@ -207,6 +228,14 @@ function splitPatternB(content: string): Page[] {
           content: `---\n${frontmatter}\n---\n\n${body}`,
           outputPath: urlToOutputPath(url),
         });
+
+        if (boundaryCount < 3) {
+          logDebug(
+            debug,
+            `pattern-b page ${boundaryCount + 1}: title="${title}" url="${url}"`
+          );
+          boundaryCount++;
+        }
       }
     }
   }
@@ -217,11 +246,12 @@ function splitPatternB(content: string): Page[] {
 /**
  * Split content using Pattern C: # Title + empty line + URL:
  */
-function splitPatternC(content: string): Page[] {
+function splitPatternC(content: string, debug?: DebugLogger): Page[] {
   const lines = content.split("\n");
   const pages: Page[] = [];
   let currentPage: { title: string; url: string; startLine: number } | null =
     null;
+  let boundaryCount = 0;
 
   for (let i = 0; i < lines.length - 2; i++) {
     const line = lines[i];
@@ -256,6 +286,14 @@ function splitPatternC(content: string): Page[] {
         url: lineAfter.slice(5).trim(),
         startLine: i,
       };
+
+      if (boundaryCount < 3) {
+        logDebug(
+          debug,
+          `pattern-c boundary at line ${i + 1}: title="${currentPage.title}" url="${currentPage.url}"`
+        );
+        boundaryCount++;
+      }
     }
   }
 
@@ -277,19 +315,25 @@ function splitPatternC(content: string): Page[] {
  * Split content using Pattern D: dash separators (vercel format)
  * Each section starts with a line of dashes, followed by metadata, another line of dashes, then content
  */
-function splitPatternD(content: string): Page[] {
+function splitPatternD(content: string, debug?: DebugLogger): Page[] {
   const pages: Page[] = [];
   const lines = content.split("\n");
   
   // Find all dash line indices
   const dashIndices: number[] = [];
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i] === DASH_LINE) {
+    const line = lines[i];
+    if (line !== undefined && line.trim() === DASH_LINE) {
       dashIndices.push(i);
     }
   }
+  logDebug(debug, `pattern-d dash lines: ${dashIndices.length}`);
+  if (dashIndices.length > 0) {
+    logDebug(debug, `pattern-d first dash line at line ${dashIndices[0] + 1}`);
+  }
 
   // Process pairs: (metadata start, metadata end) -> content until next metadata start
+  let debugBlockCount = 0;
   for (let p = 0; p < dashIndices.length - 1; p += 2) {
     const metaStart = dashIndices[p];
     const metaEnd = dashIndices[p + 1];
@@ -321,6 +365,14 @@ function splitPatternD(content: string): Page[] {
     const contentEndIndex = nextMetaStart ?? lines.length;
     const pageContent = lines.slice(metaEnd + 1, contentEndIndex).join("\n").trim();
 
+    if (debugBlockCount < 3) {
+      logDebug(
+        debug,
+        `pattern-d block ${debugBlockCount + 1}: meta lines ${metaStart + 1}-${metaEnd + 1} title="${title || "<none>"}" source="${url || "<none>"}" contentLines=${Math.max(0, contentEndIndex - (metaEnd + 1))}`
+      );
+      debugBlockCount++;
+    }
+
     if (title && url && pageContent) {
       pages.push({
         title,
@@ -337,23 +389,24 @@ function splitPatternD(content: string): Page[] {
 /**
  * Split llms-full.txt content into pages
  */
-export function split(content: string): SplitResult {
+export function split(content: string, debug?: DebugLogger): SplitResult {
   const pattern = detectPattern(content);
+  logDebug(debug, `detected pattern: ${pattern}`);
 
   let pages: Page[];
 
   switch (pattern) {
     case "pattern-a":
-      pages = splitPatternA(content);
+      pages = splitPatternA(content, debug);
       break;
     case "pattern-b":
-      pages = splitPatternB(content);
+      pages = splitPatternB(content, debug);
       break;
     case "pattern-c":
-      pages = splitPatternC(content);
+      pages = splitPatternC(content, debug);
       break;
     case "pattern-d":
-      pages = splitPatternD(content);
+      pages = splitPatternD(content, debug);
       break;
   }
 

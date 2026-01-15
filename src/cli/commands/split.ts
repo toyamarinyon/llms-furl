@@ -5,6 +5,7 @@ import { split } from "../../splitter.js";
 export interface SplitOptions {
   input: string;
   outputDir?: string;
+  debug?: boolean;
 }
 
 function isUrl(input: string): boolean {
@@ -54,10 +55,18 @@ export async function splitCommand(options: SplitOptions): Promise<void> {
     content = await file.text();
     outputDir = options.outputDir ?? ".";
   }
-  const result = split(content);
+  const debug =
+    options.debug === true
+      ? (message: string) => {
+          console.log(`[debug] ${message}`);
+        }
+      : undefined;
+
+  const result = split(content, debug);
 
   if (result.pages.length === 0) {
-    console.error("Error: No pages found in input file");
+    const hint = options.debug ? "" : " (try --debug)";
+    console.error(`Error: No pages found in input file${hint}`);
     process.exit(1);
   }
 

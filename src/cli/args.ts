@@ -9,6 +9,15 @@ export interface ParsedArgs {
   options: Record<string, string | boolean>;
 }
 
+const BOOLEAN_FLAGS = new Set(["help", "version", "debug", "h", "v", "d"]);
+
+function parseBoolean(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  if (["1", "true", "yes", "y", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "n", "off"].includes(normalized)) return false;
+  return true;
+}
+
 export function parseArgs(argv: string[]): ParsedArgs {
   const positionals: string[] = [];
   const options: Record<string, string | boolean> = {};
@@ -24,9 +33,27 @@ export function parseArgs(argv: string[]): ParsedArgs {
       if (eqIndex !== -1) {
         const key = arg.slice(2, eqIndex);
         const value = arg.slice(eqIndex + 1);
-        options[key] = value;
+        options[key] = BOOLEAN_FLAGS.has(key) ? parseBoolean(value) : value;
       } else {
         const key = arg.slice(2);
+        if (BOOLEAN_FLAGS.has(key)) {
+          options[key] = true;
+        } else {
+          const next = argv[i + 1];
+          if (next && !next.startsWith("-")) {
+            options[key] = next;
+            i++;
+          } else {
+            options[key] = true;
+          }
+        }
+      }
+    } else if (arg.startsWith("-") && arg.length === 2) {
+      // -k value or -f (flag)
+      const key = arg.slice(1);
+      if (BOOLEAN_FLAGS.has(key)) {
+        options[key] = true;
+      } else {
         const next = argv[i + 1];
         if (next && !next.startsWith("-")) {
           options[key] = next;
@@ -34,16 +61,6 @@ export function parseArgs(argv: string[]): ParsedArgs {
         } else {
           options[key] = true;
         }
-      }
-    } else if (arg.startsWith("-") && arg.length === 2) {
-      // -k value or -f (flag)
-      const key = arg.slice(1);
-      const next = argv[i + 1];
-      if (next && !next.startsWith("-")) {
-        options[key] = next;
-        i++;
-      } else {
-        options[key] = true;
       }
     } else {
       // Positional argument
@@ -72,5 +89,6 @@ Usage:
 Options:
   --help, -h     Show this help
   --version, -v  Show version
+  --debug, -d    Show split diagnostics
 `);
 }

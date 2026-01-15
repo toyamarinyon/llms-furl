@@ -7,6 +7,7 @@ import { removeCommand } from "./src/cli/commands/remove.js";
 import { cleanCommand } from "./src/cli/commands/clean.js";
 
 const args = parseArgs(Bun.argv.slice(2));
+const debug = Boolean(args.options.debug || args.options.d);
 
 // Handle help/version
 if (args.options.help || args.options.h) {
@@ -24,7 +25,7 @@ const command = args.command;
 
 switch (command) {
   case "split":
-    await runSplit(args.positionals);
+    await runSplit(args.positionals, debug);
     break;
 
   case "list":
@@ -49,7 +50,7 @@ switch (command) {
   case null:
     // No command: check if first positional looks like a file
     if (args.positionals.length > 0) {
-      await runSplit(args.positionals);
+      await runSplit(args.positionals, debug);
     } else {
       showHelp();
     }
@@ -57,11 +58,11 @@ switch (command) {
 
   default:
     // Unknown command: treat as input file
-    await runSplit([command, ...args.positionals]);
+    await runSplit([command, ...args.positionals], debug);
     break;
 }
 
-async function runSplit(positionals: string[]): Promise<void> {
+async function runSplit(positionals: string[], debugEnabled: boolean): Promise<void> {
   const input = positionals[0];
   const outputDir = positionals[1];
 
@@ -71,5 +72,5 @@ async function runSplit(positionals: string[]): Promise<void> {
     process.exit(1);
   }
 
-  await splitCommand({ input, outputDir });
+  await splitCommand({ input, outputDir, debug: debugEnabled });
 }

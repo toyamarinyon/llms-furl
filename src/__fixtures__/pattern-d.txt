@@ -1,0 +1,35 @@
+--------------------------------------------------------------------------------
+title: "Account Management"
+description: "Learn how to manage your Vercel account."
+last_updated: "2026-01-15T09:18:52.641Z"
+source: "https://vercel.com/docs/accounts"
+--------------------------------------------------------------------------------
+
+# Account Management
+
+When you first sign up for Vercel, you'll create an account.
+
+--------------------------------------------------------------------------------
+title: "Deployments"
+description: "Deploy your applications to Vercel."
+source: "https://vercel.com/docs/deployments"
+--------------------------------------------------------------------------------
+
+# Deployments
+
+Learn how to deploy your applications.
+
+```bash
+# This should not split
+vercel deploy
+```
+
+--------------------------------------------------------------------------------
+title: "Projects"
+description: "Manage your projects."
+source: "https://vercel.com/docs/projects"
+--------------------------------------------------------------------------------
+
+# Projects
+
+Create and manage your projects on Vercel.

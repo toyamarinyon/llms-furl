@@ -4,20 +4,56 @@ import { split } from "../../splitter.js";
 
 export interface SplitOptions {
   input: string;
-  outputDir: string;
+  outputDir?: string;
+}
+
+function isUrl(input: string): boolean {
+  return input.startsWith("http://") || input.startsWith("https://");
+}
+
+function urlToOutputDir(url: string): string {
+  const parsed = new URL(url);
+  let path = parsed.pathname;
+  
+  // Remove the filename (e.g., llms-full.txt)
+  path = dirname(path);
+  
+  // Remove leading slash
+  path = path.replace(/^\//, "");
+  
+  return join("liffy", parsed.host, path);
+}
+
+async function fetchContent(url: string): Promise<string> {
+  console.log(`Fetching ${url}...`);
+  
+  const response = await fetch(url);
+  
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  
+  return response.text();
 }
 
 export async function splitCommand(options: SplitOptions): Promise<void> {
-  const { input, outputDir } = options;
+  const { input } = options;
+  
+  let content: string;
+  let outputDir: string;
 
-  // Read input file
-  const file = Bun.file(input);
-  if (!(await file.exists())) {
-    console.error(`Error: File not found: ${input}`);
-    process.exit(1);
+  if (isUrl(input)) {
+    content = await fetchContent(input);
+    outputDir = options.outputDir ?? urlToOutputDir(input);
+  } else {
+    const file = Bun.file(input);
+    if (!(await file.exists())) {
+      console.error(`Error: File not found: ${input}`);
+      process.exit(1);
+    }
+    content = await file.text();
+    outputDir = options.outputDir ?? ".";
   }
-
-  const content = await file.text();
   const result = split(content);
 
   if (result.pages.length === 0) {

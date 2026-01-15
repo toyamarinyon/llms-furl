@@ -3,7 +3,7 @@
  * Splits monolithic llms-full.txt into individual markdown files
  */
 
-export type FormatPattern = "pattern-a" | "pattern-b" | "pattern-c";
+export type FormatPattern = "pattern-a" | "pattern-b" | "pattern-c" | "pattern-d";
 
 export interface Page {
   title: string;
@@ -17,6 +17,8 @@ export interface SplitResult {
   pages: Page[];
 }
 
+const DASH_LINE = "--------------------------------------------------------------------------------";
+
 /**
  * Detect the format pattern from file content
  */
@@ -24,6 +26,11 @@ export function detectPattern(content: string): FormatPattern {
   // Pattern B: <page> tags
   if (content.includes("<page>")) {
     return "pattern-b";
+  }
+
+  // Pattern D: dash separators (vercel format)
+  if (content.startsWith(DASH_LINE)) {
+    return "pattern-d";
   }
 
   // Check first few lines to distinguish Pattern A vs C
@@ -36,7 +43,7 @@ export function detectPattern(content: string): FormatPattern {
       const nextLine = lines[i + 1];
       const lineAfter = lines[i + 2];
 
-      // Pattern A/D: # Title followed immediately by Source:
+      // Pattern A: # Title followed immediately by Source:
       if (nextLine?.startsWith("Source: ")) {
         return "pattern-a";
       }
@@ -267,6 +274,67 @@ function splitPatternC(content: string): Page[] {
 }
 
 /**
+ * Split content using Pattern D: dash separators (vercel format)
+ * Each section starts with a line of dashes, followed by metadata, another line of dashes, then content
+ */
+function splitPatternD(content: string): Page[] {
+  const pages: Page[] = [];
+  const lines = content.split("\n");
+  
+  // Find all dash line indices
+  const dashIndices: number[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i] === DASH_LINE) {
+      dashIndices.push(i);
+    }
+  }
+
+  // Process pairs: (metadata start, metadata end) -> content until next metadata start
+  for (let p = 0; p < dashIndices.length - 1; p += 2) {
+    const metaStart = dashIndices[p];
+    const metaEnd = dashIndices[p + 1];
+    const nextMetaStart = dashIndices[p + 2];
+    
+    if (metaStart === undefined || metaEnd === undefined) continue;
+
+    // Parse metadata between metaStart and metaEnd
+    let title = "";
+    let url = "";
+    
+    for (let i = metaStart + 1; i < metaEnd; i++) {
+      const line = lines[i];
+      if (line === undefined) continue;
+      const trimmed = line.trim();
+      
+      const titleMatch = trimmed.match(/^title:\s*"?(.+?)"?$/);
+      if (titleMatch?.[1]) {
+        title = titleMatch[1];
+      }
+
+      const sourceMatch = trimmed.match(/^source:\s*"?(.+?)"?$/);
+      if (sourceMatch?.[1]) {
+        url = sourceMatch[1];
+      }
+    }
+
+    // Content is from metaEnd+1 until nextMetaStart (or end of file)
+    const contentEndIndex = nextMetaStart ?? lines.length;
+    const pageContent = lines.slice(metaEnd + 1, contentEndIndex).join("\n").trim();
+
+    if (title && url && pageContent) {
+      pages.push({
+        title,
+        url,
+        content: pageContent,
+        outputPath: urlToOutputPath(url),
+      });
+    }
+  }
+
+  return pages;
+}
+
+/**
  * Split llms-full.txt content into pages
  */
 export function split(content: string): SplitResult {
@@ -283,6 +351,9 @@ export function split(content: string): SplitResult {
       break;
     case "pattern-c":
       pages = splitPatternC(content);
+      break;
+    case "pattern-d":
+      pages = splitPatternD(content);
       break;
   }
 

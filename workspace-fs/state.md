@@ -11,8 +11,12 @@
   - split, list, remove, clean コマンド
   - 軽量argパーサー（Bun.argvベース）
 - [x] npx対応のpackage.json設定
+- [x] URL fetch対応 (`liffy https://vercel.com/docs/llms-full.txt`)
+- [x] Pattern D対応（vercel形式: ダッシュライン区切り）
 
 ## Next
 
 - [ ] npm publish
 - [ ] README.md 更新
+
+**将来計画:** [roadmap.md](./roadmap.md) 参照

@@ -63,10 +63,10 @@ switch (command) {
 
 async function runSplit(positionals: string[]): Promise<void> {
   const input = positionals[0];
-  const outputDir = positionals[1] || ".";
+  const outputDir = positionals[1];
 
   if (!input) {
-    console.error("Error: Input file required");
+    console.error("Error: Input file or URL required");
     showHelp();
     process.exit(1);
   }

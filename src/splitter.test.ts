@@ -187,6 +187,42 @@ describe("split - Pattern C", () => {
   });
 });
 
+describe("split - Pattern D", () => {
+  const content = readFileSync(join(fixturesDir, "pattern-d.txt"), "utf-8");
+  const result = split(content);
+
+  it("detects pattern correctly", () => {
+    expect(result.pattern).toBe("pattern-d");
+  });
+
+  it("splits into correct number of pages", () => {
+    expect(result.pages).toHaveLength(3);
+  });
+
+  it("extracts titles from metadata", () => {
+    expect(result.pages[0]?.title).toBe("Account Management");
+    expect(result.pages[1]?.title).toBe("Deployments");
+    expect(result.pages[2]?.title).toBe("Projects");
+  });
+
+  it("extracts URLs from source field", () => {
+    expect(result.pages[0]?.url).toBe("https://vercel.com/docs/accounts");
+    expect(result.pages[1]?.url).toBe("https://vercel.com/docs/deployments");
+    expect(result.pages[2]?.url).toBe("https://vercel.com/docs/projects");
+  });
+
+  it("generates correct output paths", () => {
+    expect(result.pages[0]?.outputPath).toBe("docs/accounts.md");
+    expect(result.pages[1]?.outputPath).toBe("docs/deployments.md");
+    expect(result.pages[2]?.outputPath).toBe("docs/projects.md");
+  });
+
+  it("extracts content correctly", () => {
+    expect(result.pages[0]?.content).toContain("# Account Management");
+    expect(result.pages[1]?.content).toContain("vercel deploy");
+  });
+});
+
 describe("edge cases", () => {
   it("handles empty content", () => {
     const result = split("");

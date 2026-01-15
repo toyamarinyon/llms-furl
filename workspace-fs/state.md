@@ -2,6 +2,9 @@
 
 - liffy as npx tool. User use to `npm install -g liffy`
 - 分割ルール仕様: [./decisions/split-rule.md](./decisions/split-rule.md)
+- index.json format: [./decisions/index-json.md](./decisions/index-json.md)
+- URL inputの出力先はドメイン配下に固定（pathは無視）
+- 単一のトップレベルディレクトリはフラット化: [./decisions/flatten-output-root.md](./decisions/flatten-output-root.md)
 
 ## Completed
 
@@ -21,6 +24,7 @@
 - [x] typecheckエラー（dash lineログのundefined）を修正
 - [x] Pattern Dのdebugログを検証するテストを追加
 - [x] lint対応（node: import、regex loop、non-null断言の削除）
+- [x] 分割後にindex.jsonを作成 → `src/cli/commands/split.ts`
 
 ## Next
 

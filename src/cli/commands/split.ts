@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { split } from "../../splitter.js";
+import { buildIndexJson } from "../../index-json.js";
+import { type Page, split } from "../../splitter.js";
 
 export interface SplitOptions {
 	input: string;
@@ -14,15 +15,51 @@ function isUrl(input: string): boolean {
 
 function urlToOutputDir(url: string): string {
 	const parsed = new URL(url);
-	let path = parsed.pathname;
+	return join("liffy", parsed.host);
+}
 
-	// Remove the filename (e.g., llms-full.txt)
-	path = dirname(path);
+function maybeFlattenOutputPaths(pages: Page[]): {
+	pages: Page[];
+	flattenedRoot?: string;
+} {
+	let rootDir: string | null = null;
+	for (const page of pages) {
+		const parts = page.outputPath.split("/").filter(Boolean);
+		if (parts.length < 2) {
+			return { pages };
+		}
+		const top = parts[0];
+		if (!top) {
+			return { pages };
+		}
+		if (rootDir === null) {
+			rootDir = top;
+			continue;
+		}
+		if (rootDir !== top) {
+			return { pages };
+		}
+	}
 
-	// Remove leading slash
-	path = path.replace(/^\//, "");
+	if (!rootDir) {
+		return { pages };
+	}
 
-	return join("liffy", parsed.host, path);
+	const flattenedPages = pages.map((page) => {
+		const parts = page.outputPath.split("/").filter(Boolean);
+		const newPath = parts.slice(1).join("/");
+		return { ...page, outputPath: newPath };
+	});
+
+	const seen = new Set<string>();
+	for (const page of flattenedPages) {
+		if (seen.has(page.outputPath)) {
+			return { pages };
+		}
+		seen.add(page.outputPath);
+	}
+
+	return { pages: flattenedPages, flattenedRoot: rootDir };
 }
 
 async function fetchContent(url: string): Promise<string> {
@@ -39,11 +76,12 @@ async function fetchContent(url: string): Promise<string> {
 
 export async function splitCommand(options: SplitOptions): Promise<void> {
 	const { input } = options;
+	const inputIsUrl = isUrl(input);
 
 	let content: string;
 	let outputDir: string;
 
-	if (isUrl(input)) {
+	if (inputIsUrl) {
 		content = await fetchContent(input);
 		outputDir = options.outputDir ?? urlToOutputDir(input);
 	} else {
@@ -63,19 +101,26 @@ export async function splitCommand(options: SplitOptions): Promise<void> {
 			: undefined;
 
 	const result = split(content, debug);
+	const adjusted =
+		inputIsUrl === true
+			? maybeFlattenOutputPaths(result.pages)
+			: { pages: result.pages };
 
-	if (result.pages.length === 0) {
+	if (adjusted.pages.length === 0) {
 		const hint = options.debug ? "" : " (try --debug)";
 		console.error(`Error: No pages found in input file${hint}`);
 		process.exit(1);
 	}
 
 	console.log(`Detected format: ${result.pattern}`);
-	console.log(`Found ${result.pages.length} pages`);
+	console.log(`Found ${adjusted.pages.length} pages`);
+	if (adjusted.flattenedRoot) {
+		console.log(`Flattened: removed "${adjusted.flattenedRoot}/" prefix`);
+	}
 
 	// Write output files
 	let written = 0;
-	for (const page of result.pages) {
+	for (const page of adjusted.pages) {
 		const outputPath = join(outputDir, page.outputPath);
 		const dir = dirname(outputPath);
 
@@ -84,5 +129,14 @@ export async function splitCommand(options: SplitOptions): Promise<void> {
 		written++;
 	}
 
+	const indexContent = buildIndexJson(
+		adjusted.pages.map((page) => page.outputPath),
+		input,
+		inputIsUrl ? new URL(input).host : undefined,
+	);
+	const indexPath = join(outputDir, "index.json");
+	await writeFile(indexPath, indexContent, "utf-8");
+
 	console.log(`Written ${written} files to ${outputDir}`);
+	console.log(`Index: ${indexPath}`);
 }

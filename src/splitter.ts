@@ -101,7 +101,7 @@ export function urlToOutputPath(url: string): string {
 		return `${path}.md`;
 	} catch {
 		// Fallback: use URL as-is with sanitization
-		return url.replace(/[^a-zA-Z0-9-_/]/g, "_") + ".md";
+		return `${url.replace(/[^a-zA-Z0-9-_/]/g, "_")}.md`;
 	}
 }
 
@@ -194,10 +194,11 @@ function splitPatternA(content: string, debug?: DebugLogger): Page[] {
 function splitPatternB(content: string, debug?: DebugLogger): Page[] {
 	const pages: Page[] = [];
 	const pageRegex = /<page>([\s\S]*?)<\/page>/g;
-	let match;
 	let boundaryCount = 0;
 
-	while ((match = pageRegex.exec(content)) !== null) {
+	while (true) {
+		const match = pageRegex.exec(content);
+		if (match === null) break;
 		const matchedContent = match[1];
 		if (matchedContent === undefined) continue;
 		const pageContent = matchedContent.trim();

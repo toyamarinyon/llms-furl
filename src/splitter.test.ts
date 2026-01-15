@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { readFileSync } from "fs";
-import { join } from "path";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { detectPattern, split, urlToOutputPath } from "./splitter";
 
 const fixturesDir = join(import.meta.dir, "__fixtures__");
@@ -94,8 +94,11 @@ describe("split - Pattern A", () => {
 		// The fixture has # comments inside a code block that should NOT trigger splits
 		const createPage = result.pages.find((p) => p.title === "Create");
 		expect(createPage).toBeDefined();
-		expect(createPage!.content).toContain("// # Not a title");
-		expect(createPage!.content).toContain("// Source: not a real source");
+		if (!createPage) {
+			throw new Error("Create page not found");
+		}
+		expect(createPage.content).toContain("// # Not a title");
+		expect(createPage.content).toContain("// Source: not a real source");
 	});
 });
 
@@ -182,8 +185,11 @@ describe("split - Pattern C", () => {
 	it("does not split on # inside code blocks", () => {
 		const apiPage = result.pages.find((p) => p.title === "API Reference");
 		expect(apiPage).toBeDefined();
-		expect(apiPage!.content).toContain("# Example code block");
-		expect(apiPage!.content).toContain("# This should not trigger a split");
+		if (!apiPage) {
+			throw new Error("API Reference page not found");
+		}
+		expect(apiPage.content).toContain("# Example code block");
+		expect(apiPage.content).toContain("# This should not trigger a split");
 	});
 });
 
@@ -230,7 +236,9 @@ describe("split - Pattern D", () => {
 
 		expect(debugResult.pages).toHaveLength(3);
 		expect(
-			debugMessages.some((message) => message.includes("pattern-d dash lines:")),
+			debugMessages.some((message) =>
+				message.includes("pattern-d dash lines:"),
+			),
 		).toBe(true);
 		expect(
 			debugMessages.some((message) =>

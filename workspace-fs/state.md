@@ -20,6 +20,7 @@
 - [x] Pattern D検出を優先し、`<page>`の誤検出を回避
 - [x] typecheckエラー（dash lineログのundefined）を修正
 - [x] Pattern Dのdebugログを検証するテストを追加
+- [x] lint対応（node: import、regex loop、non-null断言の削除）
 
 ## Next
 

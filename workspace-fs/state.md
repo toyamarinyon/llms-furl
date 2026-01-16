@@ -32,6 +32,7 @@
 - [x] 初回実行時に tsconfig.json exclude 追加を促す表示 → `src/agents.ts`, `src/cli/commands/split.ts`
 - [x] 初回実行時の info/hint 出力を簡潔に整形 → `src/cli/commands/split.ts`
 - [x] 初回統合の y/n プロンプトと許可制の更新 → `src/agents.ts`, `src/cli/commands/split.ts`
+- [x] okタスクのlint/typecheck/knip修正 → `src/agents.ts`, `src/cli/commands/split.ts`, `package.json`
 
 ## Next
 

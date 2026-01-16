@@ -224,14 +224,12 @@ export async function splitCommand(options: SplitOptions): Promise<void> {
 	logLines.push(pagesLine);
 
 	// Write output files
-	let written = 0;
 	for (const page of adjusted.pages) {
 		const outputPath = join(outputDir, page.outputPath);
 		const dir = dirname(outputPath);
 
 		await mkdir(dir, { recursive: true });
 		await writeFile(outputPath, page.content, "utf-8");
-		written++;
 	}
 
 	const indexContent = buildIndexJson(

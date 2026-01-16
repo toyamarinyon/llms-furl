@@ -50,10 +50,6 @@ See \`liffy/AGENTS.md\` for the manifest and usage.
 ${SECTION_END_MARKER}`;
 }
 
-export function getRootAgentsSnippet(): string {
-	return getRootSectionContent();
-}
-
 function extractSection(content: string): string | null {
 	const startIdx = content.indexOf(SECTION_MARKER);
 	const endIdx = content.indexOf(SECTION_END_MARKER);
@@ -173,7 +169,11 @@ function findExcludeArrayRange(
 		let idx = match.index + match[0].length;
 		while (idx < raw.length) {
 			const next = raw.slice(idx, idx + 2);
-			if (/\s/.test(raw[idx])) {
+			const char = raw[idx];
+			if (!char) {
+				break;
+			}
+			if (/\s/.test(char)) {
 				idx += 1;
 				continue;
 			}
@@ -193,15 +193,15 @@ function findExcludeArrayRange(
 		const start = idx;
 		let depth = 0;
 		let inString = false;
-		let escape = false;
+		let isEscaped = false;
 		for (let i = start; i < raw.length; i++) {
 			const char = raw[i];
 			const pair = raw.slice(i, i + 2);
 			if (inString) {
-				if (escape) {
-					escape = false;
+				if (isEscaped) {
+					isEscaped = false;
 				} else if (char === "\\") {
-					escape = true;
+					isEscaped = true;
 				} else if (char === '"') {
 					inString = false;
 				}
@@ -240,8 +240,9 @@ function findExcludeArrayRange(
 function getLastLineIndent(text: string): string | null {
 	const lines = text.split("\n");
 	for (let i = lines.length - 1; i >= 0; i--) {
-		if (lines[i].trim()) {
-			return lines[i].match(/^[ \t]*/)?.[0] ?? "";
+		const line = lines[i];
+		if (line?.trim()) {
+			return line.match(/^[ \t]*/)?.[0] ?? "";
 		}
 	}
 	return null;
@@ -277,11 +278,14 @@ function buildTsconfigExcludeUpdate(raw: string): string | null {
 	}
 	let updatedArrayText = arrayText;
 	for (let i = arrayText.length - 1; i >= 0; i--) {
-		if (/\S/.test(arrayText[i])) {
-			const lastChar = arrayText[i];
+		const char = arrayText[i];
+		if (!char) {
+			continue;
+		}
+		if (/\S/.test(char)) {
+			const lastChar = char;
 			if (lastChar !== "," && lastChar !== "[") {
-				updatedArrayText =
-					arrayText.slice(0, i + 1) + "," + arrayText.slice(i + 1);
+				updatedArrayText = `${arrayText.slice(0, i + 1)},${arrayText.slice(i + 1)}`;
 			}
 			break;
 		}
@@ -380,7 +384,7 @@ export function resolveLiffyRoot(
 	return null;
 }
 
-export async function ensureRootAgentsSnippet(
+async function ensureRootAgentsSnippet(
 	cwd: string = process.cwd(),
 ): Promise<boolean> {
 	const agentsPath = join(cwd, ROOT_AGENTS_FILE);
@@ -405,7 +409,7 @@ export async function ensureRootAgentsSnippet(
 		if (newContent.length > 0 && !newContent.endsWith("\n")) {
 			newContent += "\n";
 		}
-		newContent += "\n" + newSection;
+		newContent += `\n${newSection}`;
 		await writeFile(agentsPath, newContent, "utf-8");
 		return true;
 	}

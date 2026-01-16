@@ -8,9 +8,10 @@
         "@biomejs/biome": "2.3.11",
         "@types/bun": "latest",
         "knip": "5.81.0",
+        "typescript": "5.9.3",
       },
       "peerDependencies": {
-        "typescript": "^5",
+        "typescript": "5.9.3",
       },
     },
   },

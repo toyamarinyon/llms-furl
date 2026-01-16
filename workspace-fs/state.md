@@ -35,6 +35,7 @@
 - [x] 初回統合の y/n プロンプトと許可制の更新 → `src/agents.ts`, `src/cli/commands/split.ts`
 - [x] okタスクのlint/typecheck/knip修正 → `src/agents.ts`, `src/cli/commands/split.ts`, `package.json`
 - [x] bun testをsrc配下に限定（root設定） → [./bunfig.toml](./bunfig.toml)
+- [x] Agent awareness decisionを現行実装に更新 → [./decisions/agent-awareness.md](./decisions/agent-awareness.md)
 
 ## Next
 

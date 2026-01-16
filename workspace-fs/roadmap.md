@@ -13,6 +13,7 @@
   - Gateway的な役割
   - キャッシュ機能（同じURLの再取得を避ける）
   - Telemetry（利用統計、人気ドキュメントなど）
+  - llms-full.txt registry: `liffy search` でインクリメンタルに検索して見つけたもの liffy fetch
 
 ## Future Ideas
 

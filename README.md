@@ -15,11 +15,20 @@ Furl `llms-full.txt` into a structured tree of small, searchable files you can a
 
 > *furl* /fɜːrl/ — to roll up; to make compact. A play on "full."
 
-No embeddings. No vector store. Just files, trees, and pipes.
+No embeddings. No vector store. Just filesystem, bash, and pipes.
 
-Requirements: Node.js >= 20.
+## Why filesystem-based context?
+
+> "The primary lesson from the actually successful agents so far is the return to Unix fundamentals: file systems, shells, processes & CLIs. Don't fight the models, embrace the abstractions they're tuned for. Bash is all you need."
+> — [@rauch](https://x.com/rauchg/status/1876851445796315362)
+
+> LLM agents perform well with Unix-style workflows like `find`, `grep`, `jq`, and pipes. Rather than stuffing everything into the prompt, you can keep large context *local* in a filesystem and let agents retrieve smaller slices on demand — this is [filesystem-based context retrieval](https://vercel.com/changelog/introducing-bash-tool-for-filesystem-based-context-retrieval).
+
+llms-furl turns context selection into a Unix problem, not a prompt-engineering problem.
 
 ## Install
+
+Requirements: Node.js >= 20.
 
 ```bash
 npm install -g llms-furl
@@ -60,10 +69,10 @@ Now you can use standard Unix tools to build exactly the context you need.
 rg "rate" llms-furl/vercel.com/docs
 
 # Collect all API-related docs
-fd . llms-furl/vercel.com/docs/api | xargs cat
+fd . llms-furl/vercel.com/api | xargs cat
 
 # Build a context for "file upload"
-rg -l "file upload" llms-furl/vercel.com/docs | xargs cat > context.txt
+rg -l "file upload" llms-furl/vercel.com | xargs cat > context.txt
 ```
 
 Pipe that directly into your LLM:

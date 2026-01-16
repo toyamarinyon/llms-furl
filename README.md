@@ -2,14 +2,14 @@
 
 liffy turns a monolithic `llms-full.txt` into a tree of leaves — small, searchable files you can assemble into LLM context with standard Unix tools.
 
-Requirements: Bun >= 1.0.0.
+Requirements: Node.js >= 20.
 
 ## Install
 
 ```bash
 npm install -g liffy
 # or one-off
-bunx liffy --help
+npx liffy --help
 ```
 
 ## Quickstart

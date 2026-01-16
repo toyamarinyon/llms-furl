@@ -35,6 +35,25 @@ in-progress thinking for AI requests.
 - You may rename the file to reflect the decision
 - Update `state.md` with a link to the decision
 
+## Coding rules
+
+- Develop with Bun, but keep runtime code Node-compatible (Node >= 20).
+- Do not use Bun-only APIs in runtime code.
+
+Examples:
+
+Good:
+```ts
+const args = process.argv.slice(2);
+const content = await readFile(input, "utf-8");
+```
+
+Bad:
+```ts
+const args = Bun.argv.slice(2);
+const content = await Bun.file(input).text();
+```
+
 <!-- opensrc:start -->
 
 ## Source Code Reference

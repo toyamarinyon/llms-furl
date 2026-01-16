@@ -4,13 +4,14 @@
 	"description": "Split llms-full.txt into individual markdown files",
 	"type": "module",
 	"bin": {
-		"liffy": "./index.ts"
+		"liffy": "./dist/index.js"
 	},
 	"files": [
-		"index.ts",
-		"src"
+		"dist"
 	],
 	"scripts": {
+		"build": "tsup",
+		"prepublishOnly": "npm run build",
 		"test": "bun test",
 		"typecheck": "tsc --noEmit",
 		"format": "biome check --write"
@@ -28,12 +29,13 @@
 		"@biomejs/biome": "2.3.11",
 		"@types/bun": "latest",
 		"knip": "5.81.0",
+		"tsup": "8.5.1",
 		"typescript": "5.9.3"
 	},
 	"peerDependencies": {
 		"typescript": "5.9.3"
 	},
 	"engines": {
-		"bun": ">=1.0.0"
+		"node": ">=20"
 	}
 }

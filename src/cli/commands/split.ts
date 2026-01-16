@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import {
@@ -184,12 +184,16 @@ export async function splitCommand(options: SplitOptions): Promise<void> {
 		content = await fetchContent(input);
 		outputDir = options.outputDir ?? urlToOutputDir(input);
 	} else {
-		const file = Bun.file(input);
-		if (!(await file.exists())) {
-			console.error(`Error: File not found: ${input}`);
-			process.exit(1);
+		try {
+			content = await readFile(input, "utf-8");
+		} catch (error) {
+			const err = error as NodeJS.ErrnoException;
+			if (err?.code === "ENOENT") {
+				console.error(`Error: File not found: ${input}`);
+				process.exit(1);
+			}
+			throw error;
 		}
-		content = await file.text();
 		outputDir = options.outputDir ?? ".";
 	}
 	const debug =

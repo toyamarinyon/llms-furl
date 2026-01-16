@@ -1,6 +1,6 @@
 /**
  * Minimal CLI argument parser
- * Usage: parseArgs(Bun.argv.slice(2))
+ * Usage: parseArgs(process.argv.slice(2))
  */
 
 export interface ParsedArgs {

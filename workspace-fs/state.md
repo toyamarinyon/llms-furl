@@ -7,6 +7,7 @@
 - Flatten a single top-level directory: [./decisions/flatten-output-root.md](./decisions/flatten-output-root.md)
 - Agent awareness strategy for liffy: [./decisions/agent-awareness.md](./decisions/agent-awareness.md)
 - First-run integration (opensrc-style y/n consent and output): [./decisions/first-run-integration.md](./decisions/first-run-integration.md)
+- Node-compatible runtime build with tsup: [./decisions/node-runtime-build.md](./decisions/node-runtime-build.md)
 
 ## Completed
 

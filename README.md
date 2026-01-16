@@ -1,6 +1,21 @@
 # llms-furl
 
-llms-furl turns a monolithic `llms-full.txt` into a tree of leaves — small, searchable files you can assemble into LLM context with standard Unix tools.
+Furl `llms-full.txt` into a structured tree of small, searchable files you can assemble into LLM context with standard Unix tools.
+
+```text
+                                          ├── api/
+                                          │   ├── auth.md
+┌──────────────────┐                      │   └── rate-limits.md
+│  llms-full.txt   │  ─ npx llms-furl ─▶  ├── concepts/
+│  (400KB blob)    │                      │   ├── context.md
+└──────────────────┘                      │   └── rag.md
+                                          └── examples/
+                                              └── sdk.md
+```
+
+> *furl* /fɜːrl/ — to roll up; to make compact. A play on "full."
+
+No embeddings. No vector store. Just files, trees, and pipes.
 
 Requirements: Node.js >= 20.
 
@@ -56,10 +71,6 @@ Pipe that directly into your LLM:
 ```bash
 cat context.txt | llm "Summarize how file uploads work in this API"
 ```
-
-No embeddings.
-No vector store.
-Just files, trees, and pipes.
 
 ## Usage
 

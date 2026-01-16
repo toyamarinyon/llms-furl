@@ -15,7 +15,7 @@ Furl `llms-full.txt` into a structured tree of small, searchable files you can a
 
 > *furl* /fɜːrl/ — to roll up; to make compact. A play on "full."
 
-No embeddings. No vector store. Just filesystem, bash, and pipes.
+No vectors, no tools. Just files and bash.
 
 ## Why filesystem-based context?
 

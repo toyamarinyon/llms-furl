@@ -263,102 +263,15 @@ export async function splitCommand(options: SplitOptions): Promise<void> {
 	const { input } = options;
 	const inputIsUrl = isUrl(input);
 
-	let content: string;
-	let outputDir: string;
-
-	if (inputIsUrl) {
-		content = await fetchContent(input);
-		outputDir = options.outputDir ?? urlToOutputDir(input);
-	} else {
-		try {
-			content = await readFile(input, "utf-8");
-		} catch (error) {
-			const err = error as NodeJS.ErrnoException;
-			if (err?.code === "ENOENT") {
-				console.error(`Error: File not found: ${input}`);
-				process.exit(1);
-			}
-			throw error;
-		}
-		outputDir = options.outputDir ?? ".";
-	}
-	const debug =
-		options.debug === true
-			? (message: string) => {
-					console.log(`[debug] ${message}`);
-				}
-			: undefined;
-
-	const result = split(content, debug);
-	let detectedLabel: string = result.pattern;
-	let pages = result.pages;
-	let llmsTxtLinks: string[] | null = null;
-
-	if (pages.length === 0) {
-		const baseUrl = inputIsUrl ? input : undefined;
-		const links = extractLlmsTxtLinks(content, baseUrl);
-		if (links.length > 0) {
-			llmsTxtLinks = links;
-			detectedLabel = "llms-txt";
-			console.log(`\nFetching ${links.length} linked pages...`);
-			const includeHostPrefix = shouldPrefixHost(links);
-			if (debug) {
-				debug(
-					`llms.txt links: ${links.length} (host prefix: ${
-						includeHostPrefix ? "on" : "off"
-					})`,
-				);
-			}
-			pages = await fetchLinkedPages(links, includeHostPrefix, debug);
-		}
-	}
-
-	const adjusted =
-		inputIsUrl === true ? maybeFlattenOutputPaths(pages) : { pages };
-
-	if (adjusted.pages.length === 0) {
-		const hint = options.debug ? "" : " (try --debug)";
-		console.error(`Error: No pages found in input file${hint}`);
-		process.exit(1);
-	}
-
+	const outputDir = inputIsUrl
+		? (options.outputDir ?? urlToOutputDir(input))
+		: (options.outputDir ?? ".");
 	const outputDisplay = formatPath(outputDir);
-	const logLines: string[] = [];
 	const hintLines: string[] = [];
-	if (options.debug) {
-		logLines.push(`  -> Detected: ${detectedLabel}`);
-		if (llmsTxtLinks) {
-			logLines.push(`  -> Links: ${llmsTxtLinks.length}`);
-		}
-	}
-	let pagesLine = `  -> Pages: ${adjusted.pages.length}`;
-	if (options.debug && adjusted.flattenedRoot) {
-		pagesLine += ` (flattened from "${adjusted.flattenedRoot}/")`;
-	}
-	logLines.push(pagesLine);
-
-	// Write output files
-	for (const page of adjusted.pages) {
-		const outputPath = join(outputDir, page.outputPath);
-		const dir = dirname(outputPath);
-
-		await mkdir(dir, { recursive: true });
-		await writeFile(outputPath, page.content, "utf-8");
-	}
-
-	const indexContent = buildIndexJson(
-		adjusted.pages.map((page) => page.outputPath),
-		input,
-		inputIsUrl ? new URL(input).host : undefined,
-	);
-	const indexPath = join(outputDir, "index.json");
-	await writeFile(indexPath, indexContent, "utf-8");
 
 	const llmsFurlRoot = resolveLlmsFurlRoot(outputDir);
-	logLines.push(`  ${formatOk(`Saved to ${outputDisplay}`)}`);
-	if (options.debug) {
-		logLines.push(`  -> Index: ${formatPath(indexPath)}`);
-	}
+
+	// Integration actions (before download)
 	if (llmsFurlRoot) {
 		try {
 			const agentsUpdated = await ensureLlmsFurlAgents(llmsFurlRoot);
@@ -427,6 +340,97 @@ export async function splitCommand(options: SplitOptions): Promise<void> {
 			const message = error instanceof Error ? error.message : String(error);
 			console.warn(`Warning: integration updates failed (${message})`);
 		}
+	}
+
+	// Fetch content
+	let content: string;
+	if (inputIsUrl) {
+		content = await fetchContent(input);
+	} else {
+		try {
+			content = await readFile(input, "utf-8");
+		} catch (error) {
+			const err = error as NodeJS.ErrnoException;
+			if (err?.code === "ENOENT") {
+				console.error(`Error: File not found: ${input}`);
+				process.exit(1);
+			}
+			throw error;
+		}
+	}
+	const debug =
+		options.debug === true
+			? (message: string) => {
+					console.log(`[debug] ${message}`);
+				}
+			: undefined;
+
+	const result = split(content, debug);
+	let detectedLabel: string = result.pattern;
+	let pages = result.pages;
+	let llmsTxtLinks: string[] | null = null;
+
+	if (pages.length === 0) {
+		const baseUrl = inputIsUrl ? input : undefined;
+		const links = extractLlmsTxtLinks(content, baseUrl);
+		if (links.length > 0) {
+			llmsTxtLinks = links;
+			detectedLabel = "llms-txt";
+			console.log(`\nFetching ${links.length} linked pages...`);
+			const includeHostPrefix = shouldPrefixHost(links);
+			if (debug) {
+				debug(
+					`llms.txt links: ${links.length} (host prefix: ${
+						includeHostPrefix ? "on" : "off"
+					})`,
+				);
+			}
+			pages = await fetchLinkedPages(links, includeHostPrefix, debug);
+		}
+	}
+
+	const adjusted =
+		inputIsUrl === true ? maybeFlattenOutputPaths(pages) : { pages };
+
+	if (adjusted.pages.length === 0) {
+		const hint = options.debug ? "" : " (try --debug)";
+		console.error(`Error: No pages found in input file${hint}`);
+		process.exit(1);
+	}
+
+	const logLines: string[] = [];
+	if (options.debug) {
+		logLines.push(`  -> Detected: ${detectedLabel}`);
+		if (llmsTxtLinks) {
+			logLines.push(`  -> Links: ${llmsTxtLinks.length}`);
+		}
+	}
+	let pagesLine = `  -> Pages: ${adjusted.pages.length}`;
+	if (options.debug && adjusted.flattenedRoot) {
+		pagesLine += ` (flattened from "${adjusted.flattenedRoot}/")`;
+	}
+	logLines.push(pagesLine);
+
+	// Write output files
+	for (const page of adjusted.pages) {
+		const outputPath = join(outputDir, page.outputPath);
+		const dir = dirname(outputPath);
+
+		await mkdir(dir, { recursive: true });
+		await writeFile(outputPath, page.content, "utf-8");
+	}
+
+	const indexContent = buildIndexJson(
+		adjusted.pages.map((page) => page.outputPath),
+		input,
+		inputIsUrl ? new URL(input).host : undefined,
+	);
+	const indexPath = join(outputDir, "index.json");
+	await writeFile(indexPath, indexContent, "utf-8");
+
+	logLines.push(`  ${formatOk(`Saved to ${outputDisplay}`)}`);
+	if (options.debug) {
+		logLines.push(`  -> Index: ${formatPath(indexPath)}`);
 	}
 
 	for (const line of logLines) {

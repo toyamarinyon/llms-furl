@@ -1,5 +1,5 @@
 {
-	"exclude": ["opensrc", "node_modules", "llms-furl", "dist"],
+	"exclude": ["opensrc", "node_modules", "dist"],
 	"compilerOptions": {
 		// Environment setup & latest features
 		"lib": ["ESNext"],

@@ -214,9 +214,15 @@ interface FetchFailure {
 	status: string;
 }
 
+interface FetchSkipped {
+	url: string;
+	reason: string;
+}
+
 interface FetchLinkedPagesResult {
 	pages: Page[];
 	failures: FetchFailure[];
+	skipped: FetchSkipped[];
 }
 
 async function fetchLinkedPages(
@@ -226,6 +232,7 @@ async function fetchLinkedPages(
 ): Promise<FetchLinkedPagesResult> {
 	const results: Array<Page | null> = new Array(urls.length).fill(null);
 	const failures: FetchFailure[] = [];
+	const skipped: FetchSkipped[] = [];
 	const seenPaths = new Set<string>();
 	let cursor = 0;
 	let debugSamples = 0;
@@ -246,9 +253,7 @@ async function fetchLinkedPages(
 				const content = await fetchContent(url, false);
 				const outputPath = outputPathForUrl(url, includeHostPrefix);
 				if (seenPaths.has(outputPath)) {
-					console.warn(
-						`Warning: duplicate output path "${outputPath}" for ${url} (skipping)`,
-					);
+					skipped.push({ url, reason: `duplicate path "${outputPath}"` });
 					continue;
 				}
 				seenPaths.add(outputPath);
@@ -280,6 +285,7 @@ async function fetchLinkedPages(
 	return {
 		pages: results.filter((page): page is Page => page !== null),
 		failures,
+		skipped,
 	};
 }
 
@@ -394,6 +400,7 @@ export async function splitCommand(options: SplitOptions): Promise<void> {
 	let pages = result.pages;
 	let llmsTxtLinks: string[] | null = null;
 	let fetchFailures: FetchFailure[] = [];
+	let fetchSkipped: FetchSkipped[] = [];
 
 	if (pages.length === 0) {
 		const baseUrl = inputIsUrl ? input : undefined;
@@ -413,6 +420,7 @@ export async function splitCommand(options: SplitOptions): Promise<void> {
 			const fetchResult = await fetchLinkedPages(links, includeHostPrefix, debug);
 			pages = fetchResult.pages;
 			fetchFailures = fetchResult.failures;
+			fetchSkipped = fetchResult.skipped;
 		}
 	}
 
@@ -434,6 +442,12 @@ export async function splitCommand(options: SplitOptions): Promise<void> {
 	}
 	if (llmsTxtLinks) {
 		logLines.push(`  -> Fetched: ${adjusted.pages.length}`);
+		if (fetchSkipped.length > 0) {
+			logLines.push(`  -> Skipped: ${fetchSkipped.length}`);
+			for (const skip of fetchSkipped) {
+				logLines.push(`     - ${skip.reason}: ${skip.url}`);
+			}
+		}
 		if (fetchFailures.length > 0) {
 			logLines.push(`  -> Failed: ${fetchFailures.length}`);
 			for (const failure of fetchFailures) {

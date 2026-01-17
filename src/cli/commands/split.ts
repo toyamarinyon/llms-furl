@@ -71,9 +71,17 @@ async function promptYesNo(prompt: string): Promise<boolean> {
 		output: process.stdout,
 	});
 	try {
-		const answer = await rl.question(prompt);
-		const normalized = answer.trim().toLowerCase();
-		return normalized === "y" || normalized === "yes";
+		while (true) {
+			const answer = await rl.question(prompt);
+			const normalized = answer.trim().toLowerCase();
+			if (normalized === "y" || normalized === "yes") {
+				return true;
+			}
+			if (normalized === "n" || normalized === "no") {
+				return false;
+			}
+			console.log("Please enter 'y' or 'n'.");
+		}
 	} finally {
 		rl.close();
 	}

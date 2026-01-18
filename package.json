@@ -24,6 +24,10 @@
 		"ai",
 		"docs"
 	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/toyamarinyon/llms-furl"
+	},
 	"license": "MIT",
 	"devDependencies": {
 		"@biomejs/biome": "2.3.11",

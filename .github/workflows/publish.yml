@@ -52,7 +52,7 @@ jobs:
         run: npm publish
 
       - name: Capture version
-        run: echo "VERSION=$(node -p \"require('./package.json').version\")" >> "$GITHUB_ENV"
+        run: echo "VERSION=$(node -p 'require(\"./package.json\").version')" >> "$GITHUB_ENV"
 
       - name: Commit and tag
         run: |
